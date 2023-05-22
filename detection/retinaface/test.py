@@ -19,8 +19,8 @@ print(img.shape)
 im_shape = img.shape
 target_size = scales[0]
 max_size = scales[1]
-im_size_min = np.min(im_shape[0:2])
-im_size_max = np.max(im_shape[0:2])
+im_size_min = np.min(im_shape[:2])
+im_size_max = np.max(im_shape[:2])
 #im_scale = 1.0
 #if im_size_min>target_size or im_size_max>max_size:
 im_scale = float(target_size) / float(im_size_min)
@@ -53,7 +53,7 @@ if faces is not None:
             #print(landmark.shape)
             for l in range(landmark5.shape[0]):
                 color = (0, 0, 255)
-                if l == 0 or l == 3:
+                if l in [0, 3]:
                     color = (0, 255, 0)
                 cv2.circle(img, (landmark5[l][0], landmark5[l][1]), 1, color,
                            2)

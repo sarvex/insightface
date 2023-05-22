@@ -81,14 +81,14 @@ def parser(add_help=True):
 def print_config(args):
     args = vars(args)
     table = PrettyTable(['Param', 'Value'])
-    for param in args:
-        table.add_row([param, args[param]])
+    for param, value in args.items():
+        table.add_row([param, value])
     width = len(str(table).split("\n")[0])
-    print("{}".format("-" * width))
+    print(f'{"-" * width}')
     print("PaddleFace".center(width))
     print(table)
     print("Powered by PaddlePaddle!".rjust(width))
-    print("{}".format("-" * width))
+    print(f'{"-" * width}')
 
 
 def download_with_progressbar(url, save_path):
@@ -126,7 +126,7 @@ def check_model_file(model):
         if not os.path.exists(model_file_path) or not os.path.exists(
                 params_file_path):
             raise Exception(
-                f"The specifed model directory error. The drectory must include 'inference.pdmodel' and 'inference.pdiparams'."
+                "The specifed model directory error. The drectory must include 'inference.pdmodel' and 'inference.pdiparams'."
             )
 
     elif model in model_map:
@@ -165,7 +165,7 @@ def check_model_file(model):
             )
     else:
         raise Exception(
-            f"The specifed model name error. Support 'BlazeFace' for detection. And support local directory that include model files ('inference.pdmodel' and 'inference.pdiparams')."
+            "The specifed model name error. Support 'BlazeFace' for detection. And support local directory that include model files ('inference.pdmodel' and 'inference.pdiparams')."
         )
 
     return model_file_path, params_file_path
@@ -306,15 +306,15 @@ class VideoReader(object):
         self.file_name = os.path.split(inputs)[-1]
 
     def get_info(self):
-        info = {}
         width = int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fourcc = cv2.VideoWriter_fourcc(* 'mp4v')
-        info["file_name"] = self.file_name
-        info["fps"] = 30
-        info["shape"] = (width, height)
-        info["fourcc"] = cv2.VideoWriter_fourcc(* 'mp4v')
-        return info
+        return {
+            "file_name": self.file_name,
+            "fps": 30,
+            "shape": (width, height),
+            "fourcc": cv2.VideoWriter_fourcc(*'mp4v'),
+        }
 
     def __iter__(self):
         return self
@@ -429,9 +429,9 @@ class Detector(BasePredictor):
             mean=[0.485, 0.456, 0.406],
             std=[0.229, 0.224, 0.225],
             order='hwc')
-        img_info = {}
-        img_info["im_shape"] = np.array(
-            img.shape[:2], dtype=np.float32)[np.newaxis, :]
+        img_info = {
+            "im_shape": np.array(img.shape[:2], dtype=np.float32)[np.newaxis, :]
+        }
         img_info["scale_factor"] = np.array(
             [img_scale_y, img_scale_x], dtype=np.float32)[np.newaxis, :]
 
@@ -451,10 +451,7 @@ class Detector(BasePredictor):
         self.predictor.run()
         output_tensor = self.predictor.get_output_handle(self.output_names[0])
         np_boxes = output_tensor.copy_to_cpu()
-        # boxes_num = self.detector.get_output_handle(self.detector_output_names[1])
-        # np_boxes_num = boxes_num.copy_to_cpu()
-        box_list = self.postprocess(np_boxes)
-        return box_list
+        return self.postprocess(np_boxes)
 
 class FaceDetector(object):
     def __init__(self, args, print_info=True):
@@ -526,22 +523,26 @@ class FaceDetector(object):
         return box_list, np_feature
 
     def init_reader_writer(self, input_data):
-        if isinstance(input_data, np.ndarray):
+        if (
+            not isinstance(input_data, np.ndarray)
+            and isinstance(input_data, str)
+            and input_data.endswith('mp4')
+        ):
+            self.input_reader = VideoReader(input_data)
+            info = self.input_reader.get_info()
+            self.output_writer = VideoWriter(self.args.output, info)
+        elif (
+            not isinstance(input_data, np.ndarray)
+            and isinstance(input_data, str)
+            and not input_data.endswith('mp4')
+            or isinstance(input_data, np.ndarray)
+        ):
             self.input_reader = ImageReader(input_data)
             if hasattr(self, "det_predictor"):
                 self.output_writer = ImageWriter(self.args.output)
-        elif isinstance(input_data, str):
-            if input_data.endswith('mp4'):
-                self.input_reader = VideoReader(input_data)
-                info = self.input_reader.get_info()
-                self.output_writer = VideoWriter(self.args.output, info)
-            else:
-                self.input_reader = ImageReader(input_data)
-                if hasattr(self, "det_predictor"):
-                    self.output_writer = ImageWriter(self.args.output)
         else:
             raise Exception(
-                f"The input data error. Only support path of image or video(.mp4) and dirctory that include images."
+                "The input data error. Only support path of image or video(.mp4) and dirctory that include images."
             )
 
     def predict(self, input_data, print_info=False):
@@ -575,7 +576,7 @@ class FaceDetector(object):
                 "features": np_feature,
                 "labels": labels
             }
-        logging.info(f"Predict complete!")
+        logging.info("Predict complete!")
 
 
 # for CLI
@@ -585,8 +586,6 @@ def main(args=None):
     args = parser().parse_args()
     predictor = FaceDetector(args)
     res = predictor.predict(args.input, print_info=True)
-    for _ in res:
-        pass
 
 
 if __name__ == "__main__":

@@ -36,7 +36,7 @@ def main(args):
     if len(cvd) > 0:
         for i in range(len(cvd.split(','))):
             ctx.append(mx.gpu(i))
-    if len(ctx) == 0:
+    if not ctx:
         ctx = [mx.cpu()]
         print('use cpu')
     else:
@@ -122,7 +122,7 @@ def main(args):
         arg_params, aux_params = model.get_params()
         vmodel.set_params(arg_params, aux_params)
         for target in config.val_targets:
-            _file = os.path.join(config.dataset_path, '%s.rec' % target)
+            _file = os.path.join(config.dataset_path, f'{target}.rec')
             if not os.path.exists(_file):
                 continue
             val_iter = FaceSegIter(

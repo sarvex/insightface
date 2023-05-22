@@ -115,8 +115,18 @@ def get_xxyys(names):
     # should be subject, action, camera
     splits = names[0].split('/')
     video_name = '/'.join(splits[:-1])
-    part_label_path = osp.join(root, splits[0], 'MySegmentsMat', 'PartLabels',
-                splits[1] + ("cam" + splits[2]).replace('cam0', '.54138969').replace('cam2','.58860488').replace('cam1', '.55011271').replace('cam3', '.60457274') + ".mat")
+    part_label_path = osp.join(
+        root,
+        splits[0],
+        'MySegmentsMat',
+        'PartLabels',
+        splits[1]
+        + f"cam{splits[2]}".replace('cam0', '.54138969')
+        .replace('cam2', '.58860488')
+        .replace('cam1', '.55011271')
+        .replace('cam3', '.60457274')
+        + ".mat",
+    )
     f = h5py.File(part_label_path, "r")
     for idx, name in enumerate(names): 
         partmask = f[f['Feat'][idx*30, 0]][()].T 
@@ -194,7 +204,7 @@ for imageid in t:
 
     def update_video(frame_idx):
         global initialized, lines_3d, lines_3d_gt, lines_3d_ssadv
-        print("{}/{} ".format(frame_idx, num_render), end='\r')
+        print(f"{frame_idx}/{num_render} ", end='\r')
         pose2d = poses2d_in_video[frame_idx]
         pose3d = poses3d_in_video[frame_idx]
         pose3d_ssadv = poses3d_ssadv_in_video[frame_idx]

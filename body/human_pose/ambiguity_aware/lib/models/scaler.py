@@ -27,10 +27,15 @@ class Scaler(nn.Module):
         return out 
 
 def get_scaler(cfg):
-    input_size = cfg.NETWORK.SCALER_INPUT_SIZE 
+    input_size = cfg.NETWORK.SCALER_INPUT_SIZE
     num_res_blocks = cfg.NETWORK.SCALER_RES_BLOCKS
-    num_channels = cfg.NETWORK.NUM_CHANNELS 
-    bn_track = cfg.NETWORK.BN_TRACK 
+    num_channels = cfg.NETWORK.NUM_CHANNELS
+    bn_track = cfg.NETWORK.BN_TRACK
     dropout = cfg.NETWORK.DROPOUT
-    scaler = Scaler(input_size=input_size, num_channels=num_channels, num_res_blocks=num_res_blocks, dropout=dropout, bn_track=bn_track)
-    return scaler
+    return Scaler(
+        input_size=input_size,
+        num_channels=num_channels,
+        num_res_blocks=num_res_blocks,
+        dropout=dropout,
+        bn_track=bn_track,
+    )

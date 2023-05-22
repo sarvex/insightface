@@ -12,16 +12,15 @@ memonger = False
 
 
 def Conv(**kwargs):
-    body = mx.sym.Convolution(**kwargs)
-    return body
+    return mx.sym.Convolution(**kwargs)
 
 
 def Act(data, act_type, name):
-    if act_type == 'prelu':
-        body = mx.sym.LeakyReLU(data=data, act_type='prelu', name=name)
-    else:
-        body = mx.symbol.Activation(data=data, act_type=act_type, name=name)
-    return body
+    return (
+        mx.sym.LeakyReLU(data=data, act_type='prelu', name=name)
+        if act_type == 'prelu'
+        else mx.symbol.Activation(data=data, act_type=act_type, name=name)
+    )
 
 
 #def lin(data, num_filter, workspace, name, binarize, dcn):
@@ -54,34 +53,38 @@ def Act(data, act_type, name):
 
 def lin3(data, num_filter, workspace, name, k, g=1, d=1):
     if k != 3:
-        conv1 = Conv(data=data,
-                     num_filter=num_filter,
-                     kernel=(k, k),
-                     stride=(1, 1),
-                     pad=((k - 1) // 2, (k - 1) // 2),
-                     num_group=g,
-                     no_bias=True,
-                     workspace=workspace,
-                     name=name + '_conv')
+        conv1 = Conv(
+            data=data,
+            num_filter=num_filter,
+            kernel=(k, k),
+            stride=(1, 1),
+            pad=((k - 1) // 2, (k - 1) // 2),
+            num_group=g,
+            no_bias=True,
+            workspace=workspace,
+            name=f'{name}_conv',
+        )
     else:
-        conv1 = Conv(data=data,
-                     num_filter=num_filter,
-                     kernel=(k, k),
-                     stride=(1, 1),
-                     pad=(d, d),
-                     num_group=g,
-                     dilate=(d, d),
-                     no_bias=True,
-                     workspace=workspace,
-                     name=name + '_conv')
-    bn1 = mx.sym.BatchNorm(data=conv1,
-                           fix_gamma=False,
-                           momentum=bn_mom,
-                           eps=2e-5,
-                           name=name + '_bn')
-    act1 = Act(data=bn1, act_type='relu', name=name + '_relu')
-    ret = act1
-    return ret
+        conv1 = Conv(
+            data=data,
+            num_filter=num_filter,
+            kernel=(k, k),
+            stride=(1, 1),
+            pad=(d, d),
+            num_group=g,
+            dilate=(d, d),
+            no_bias=True,
+            workspace=workspace,
+            name=f'{name}_conv',
+        )
+    bn1 = mx.sym.BatchNorm(
+        data=conv1,
+        fix_gamma=False,
+        momentum=bn_mom,
+        eps=2e-5,
+        name=f'{name}_bn',
+    )
+    return Act(data=bn1, act_type='relu', name=f'{name}_relu')
 
 
 def ConvFactory(data,
@@ -95,43 +98,45 @@ def ConvFactory(data,
                 dcn=False,
                 name=''):
     if not dcn:
-        conv = mx.symbol.Convolution(data=data,
-                                     num_filter=num_filter,
-                                     kernel=kernel,
-                                     stride=stride,
-                                     pad=pad,
-                                     no_bias=True,
-                                     workspace=workspace,
-                                     name=name + '_conv')
+        conv = mx.symbol.Convolution(
+            data=data,
+            num_filter=num_filter,
+            kernel=kernel,
+            stride=stride,
+            pad=pad,
+            no_bias=True,
+            workspace=workspace,
+            name=f'{name}_conv',
+        )
     else:
-        conv_offset = mx.symbol.Convolution(name=name + '_conv_offset',
-                                            data=data,
-                                            num_filter=18,
-                                            pad=(1, 1),
-                                            kernel=(3, 3),
-                                            stride=(1, 1))
-        conv = mx.contrib.symbol.DeformableConvolution(name=name + "_conv",
-                                                       data=data,
-                                                       offset=conv_offset,
-                                                       num_filter=num_filter,
-                                                       pad=(1, 1),
-                                                       kernel=(3, 3),
-                                                       num_deformable_group=1,
-                                                       stride=stride,
-                                                       dilate=(1, 1),
-                                                       no_bias=False)
-    bn = mx.symbol.BatchNorm(data=conv,
-                             fix_gamma=False,
-                             momentum=bn_mom,
-                             eps=2e-5,
-                             name=name + '_bn')
-    if with_act:
-        act = Act(bn, act_type, name=name + '_relu')
-        #act = mx.symbol.Activation(
-        #    data=bn, act_type=act_type, attr=mirror_attr, name=name+'_relu')
-        return act
-    else:
-        return bn
+        conv_offset = mx.symbol.Convolution(
+            name=f'{name}_conv_offset',
+            data=data,
+            num_filter=18,
+            pad=(1, 1),
+            kernel=(3, 3),
+            stride=(1, 1),
+        )
+        conv = mx.contrib.symbol.DeformableConvolution(
+            name=f"{name}_conv",
+            data=data,
+            offset=conv_offset,
+            num_filter=num_filter,
+            pad=(1, 1),
+            kernel=(3, 3),
+            num_deformable_group=1,
+            stride=stride,
+            dilate=(1, 1),
+            no_bias=False,
+        )
+    bn = mx.symbol.BatchNorm(
+        data=conv,
+        fix_gamma=False,
+        momentum=bn_mom,
+        eps=2e-5,
+        name=f'{name}_bn',
+    )
+    return Act(bn, act_type, name=f'{name}_relu') if with_act else bn
 
 
 class CAB:
@@ -201,120 +206,138 @@ def conv_resnet(data, num_filter, stride, dim_match, name, binarize, dcn,
     bit = 1
     #print('in unit2')
     # the same as https://github.com/facebook/fb.resnet.torch#notes, a bit difference with origin paper
-    bn1 = mx.sym.BatchNorm(data=data,
-                           fix_gamma=False,
-                           eps=2e-5,
-                           momentum=bn_mom,
-                           name=name + '_bn1')
+    bn1 = mx.sym.BatchNorm(
+        data=data,
+        fix_gamma=False,
+        eps=2e-5,
+        momentum=bn_mom,
+        name=f'{name}_bn1',
+    )
     if not binarize:
-        act1 = Act(data=bn1, act_type='relu', name=name + '_relu1')
-        conv1 = Conv(data=act1,
-                     num_filter=int(num_filter * 0.5),
-                     kernel=(1, 1),
-                     stride=(1, 1),
-                     pad=(0, 0),
-                     no_bias=True,
-                     workspace=workspace,
-                     name=name + '_conv1')
+        act1 = Act(data=bn1, act_type='relu', name=f'{name}_relu1')
+        conv1 = Conv(
+            data=act1,
+            num_filter=int(num_filter * 0.5),
+            kernel=(1, 1),
+            stride=(1, 1),
+            pad=(0, 0),
+            no_bias=True,
+            workspace=workspace,
+            name=f'{name}_conv1',
+        )
     else:
-        act1 = mx.sym.QActivation(data=bn1,
-                                  act_bit=ACT_BIT,
-                                  name=name + '_relu1',
-                                  backward_only=True)
-        conv1 = mx.sym.QConvolution(data=act1,
-                                    num_filter=int(num_filter * 0.5),
-                                    kernel=(1, 1),
-                                    stride=(1, 1),
-                                    pad=(0, 0),
-                                    no_bias=True,
-                                    workspace=workspace,
-                                    name=name + '_conv1',
-                                    act_bit=ACT_BIT,
-                                    weight_bit=bit)
-    bn2 = mx.sym.BatchNorm(data=conv1,
-                           fix_gamma=False,
-                           eps=2e-5,
-                           momentum=bn_mom,
-                           name=name + '_bn2')
+        act1 = mx.sym.QActivation(
+            data=bn1, act_bit=ACT_BIT, name=f'{name}_relu1', backward_only=True
+        )
+        conv1 = mx.sym.QConvolution(
+            data=act1,
+            num_filter=int(num_filter * 0.5),
+            kernel=(1, 1),
+            stride=(1, 1),
+            pad=(0, 0),
+            no_bias=True,
+            workspace=workspace,
+            name=f'{name}_conv1',
+            act_bit=ACT_BIT,
+            weight_bit=bit,
+        )
+    bn2 = mx.sym.BatchNorm(
+        data=conv1,
+        fix_gamma=False,
+        eps=2e-5,
+        momentum=bn_mom,
+        name=f'{name}_bn2',
+    )
     if not binarize:
-        act2 = Act(data=bn2, act_type='relu', name=name + '_relu2')
-        conv2 = Conv(data=act2,
-                     num_filter=int(num_filter * 0.5),
-                     kernel=(3, 3),
-                     stride=(1, 1),
-                     pad=(1, 1),
-                     no_bias=True,
-                     workspace=workspace,
-                     name=name + '_conv2')
+        act2 = Act(data=bn2, act_type='relu', name=f'{name}_relu2')
+        conv2 = Conv(
+            data=act2,
+            num_filter=int(num_filter * 0.5),
+            kernel=(3, 3),
+            stride=(1, 1),
+            pad=(1, 1),
+            no_bias=True,
+            workspace=workspace,
+            name=f'{name}_conv2',
+        )
     else:
-        act2 = mx.sym.QActivation(data=bn2,
-                                  act_bit=ACT_BIT,
-                                  name=name + '_relu2',
-                                  backward_only=True)
-        conv2 = mx.sym.QConvolution(data=act2,
-                                    num_filter=int(num_filter * 0.5),
-                                    kernel=(3, 3),
-                                    stride=(1, 1),
-                                    pad=(1, 1),
-                                    no_bias=True,
-                                    workspace=workspace,
-                                    name=name + '_conv2',
-                                    act_bit=ACT_BIT,
-                                    weight_bit=bit)
-    bn3 = mx.sym.BatchNorm(data=conv2,
-                           fix_gamma=False,
-                           eps=2e-5,
-                           momentum=bn_mom,
-                           name=name + '_bn3')
+        act2 = mx.sym.QActivation(
+            data=bn2, act_bit=ACT_BIT, name=f'{name}_relu2', backward_only=True
+        )
+        conv2 = mx.sym.QConvolution(
+            data=act2,
+            num_filter=int(num_filter * 0.5),
+            kernel=(3, 3),
+            stride=(1, 1),
+            pad=(1, 1),
+            no_bias=True,
+            workspace=workspace,
+            name=f'{name}_conv2',
+            act_bit=ACT_BIT,
+            weight_bit=bit,
+        )
+    bn3 = mx.sym.BatchNorm(
+        data=conv2,
+        fix_gamma=False,
+        eps=2e-5,
+        momentum=bn_mom,
+        name=f'{name}_bn3',
+    )
     if not binarize:
-        act3 = Act(data=bn3, act_type='relu', name=name + '_relu3')
-        conv3 = Conv(data=act3,
-                     num_filter=num_filter,
-                     kernel=(1, 1),
-                     stride=(1, 1),
-                     pad=(0, 0),
-                     no_bias=True,
-                     workspace=workspace,
-                     name=name + '_conv3')
+        act3 = Act(data=bn3, act_type='relu', name=f'{name}_relu3')
+        conv3 = Conv(
+            data=act3,
+            num_filter=num_filter,
+            kernel=(1, 1),
+            stride=(1, 1),
+            pad=(0, 0),
+            no_bias=True,
+            workspace=workspace,
+            name=f'{name}_conv3',
+        )
     else:
-        act3 = mx.sym.QActivation(data=bn3,
-                                  act_bit=ACT_BIT,
-                                  name=name + '_relu3',
-                                  backward_only=True)
-        conv3 = mx.sym.QConvolution(data=act3,
-                                    num_filter=num_filter,
-                                    kernel=(1, 1),
-                                    stride=(1, 1),
-                                    pad=(0, 0),
-                                    no_bias=True,
-                                    workspace=workspace,
-                                    name=name + '_conv3',
-                                    act_bit=ACT_BIT,
-                                    weight_bit=bit)
+        act3 = mx.sym.QActivation(
+            data=bn3, act_bit=ACT_BIT, name=f'{name}_relu3', backward_only=True
+        )
+        conv3 = mx.sym.QConvolution(
+            data=act3,
+            num_filter=num_filter,
+            kernel=(1, 1),
+            stride=(1, 1),
+            pad=(0, 0),
+            no_bias=True,
+            workspace=workspace,
+            name=f'{name}_conv3',
+            act_bit=ACT_BIT,
+            weight_bit=bit,
+        )
     #if binarize:
     #  conv3 = mx.sym.BatchNorm(data=conv3, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn4')
     if dim_match:
         shortcut = data
+    elif binarize:
+        shortcut = mx.sym.QConvolution(
+            data=act1,
+            num_filter=num_filter,
+            kernel=(1, 1),
+            stride=stride,
+            pad=(0, 0),
+            no_bias=True,
+            workspace=workspace,
+            name=f'{name}_sc',
+            act_bit=ACT_BIT,
+            weight_bit=bit,
+        )
     else:
-        if not binarize:
-            shortcut = Conv(data=act1,
-                            num_filter=num_filter,
-                            kernel=(1, 1),
-                            stride=stride,
-                            no_bias=True,
-                            workspace=workspace,
-                            name=name + '_sc')
-        else:
-            shortcut = mx.sym.QConvolution(data=act1,
-                                           num_filter=num_filter,
-                                           kernel=(1, 1),
-                                           stride=stride,
-                                           pad=(0, 0),
-                                           no_bias=True,
-                                           workspace=workspace,
-                                           name=name + '_sc',
-                                           act_bit=ACT_BIT,
-                                           weight_bit=bit)
+        shortcut = Conv(
+            data=act1,
+            num_filter=num_filter,
+            kernel=(1, 1),
+            stride=stride,
+            no_bias=True,
+            workspace=workspace,
+            name=f'{name}_sc',
+        )
     if memonger:
         shortcut._set_attr(mirror_stage='True')
     return conv3 + shortcut

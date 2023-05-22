@@ -60,7 +60,7 @@ def parse_args():
 
 def reset_config(config, args):
     if not config.USE_GT: 
-        config.USE_GT = True if args.use_gt else False
+        config.USE_GT = bool(args.use_gt)
     if args.gpu:
         config.GPU = args.gpu
     config.NUM_WORKERS = args.workers
@@ -79,8 +79,10 @@ def main():
     reset_config(config, args)
     set_cudnn(config)
     seed = config.RANDOM_SEED
-    np.random.seed(seed); random.seed(seed)
-    torch.manual_seed(seed) ; torch.cuda.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
     os.environ['CUDA_VISIBLE_DEVICES'] = config.GPU.strip()
     gpus = list(range(len(config.GPU.strip().split(','))))
 
@@ -152,24 +154,24 @@ def main():
         pin_memory=True,
         num_workers=config.NUM_WORKERS
     )
-    
+
     if args.eval:
         prefix = config.DATA.DATASET_NAME
         # for mode in ['train', 'valid']:
         for mode in ['valid']:
-            is_train = True if mode == 'train' else False
+            is_train = mode == 'train'
             v3d_to_ours = [3, 2, 1, 4, 5, 6, 16, 15, 14, 11, 12, 13, 8, 0, 7, 9, 10] if prefix == "h36m" else np.arange(config.DATA.NUM_JOINTS)
             mpi2h36m = [10, 9, 8, 11, 12, 13, 4, 3, 2, 5, 6, 7, 1, 14, 15, 16, 0]
             if prefix == 'surreal': 
                 indices = np.arange(config.DATA.NUM_JOINTS)
             else:
-                indices = v3d_to_ours if prefix == "h36m" else mpi2h36m 
+                indices = v3d_to_ours if prefix == "h36m" else mpi2h36m
             mode = "train" if is_train else "valid"
             read_name = f"../data/{prefix}_{mode}_pred3.h5"
             # read_name = f"../../unsupervised_mesh/data/h36m_{mode}_pred_3d_mesh.h5"
             save_name = f"../data/{prefix}_{mode}_pred_3d.h5"
             if args.eval_suffix is not None: 
-                save_name = save_name[:-3] + "_" + args.eval_suffix + ".h5"
+                save_name = f"{save_name[:-3]}_{args.eval_suffix}.h5"
 
             # eval mode, load the pretrained model and generate the 3d prediction of all 3ds 
             if not config.TRAIN.PRETRAIN_LIFTER: 
@@ -205,7 +207,7 @@ def main():
                 fout['auc_p2'] = all_out_data['auc_p2']
                 fout['pckh5_p2'] = all_out_data['pckh5_p2']
             if 'scales' in all_out_data.keys():
-                fout['scale_pre'] = all_out_data['scales'] 
+                fout['scale_pre'] = all_out_data['scales']
             if 'scale_mids' in all_out_data.keys():
                 fout['scale_mid_pre'] = all_out_data['scale_mids']
 

@@ -37,7 +37,7 @@ class SurrealDataset(Dataset):
     def _load_data_set(self):
         # self.v3d_2d_to_ours = np.arange(17)
         if self.is_train:
-            print('start loading surreal {} data.'.format("train" if self.is_train else "test"))
+            print(f'start loading surreal {"train" if self.is_train else "test"} data.')
         key = "original_joint_2d_gt" if self.use_gt else "joint_2d_pre"
         assert self.use_gt
         fp = h5py.File(self.data_path, "r")
@@ -69,15 +69,18 @@ class SurrealDataset(Dataset):
         self.kp3ds = np.array(fp['joint_3d_gt'])
         # self.kp3ds[:, 12] = (self.kp3ds[:, 8] + self.kp3ds[:, 9]) / 2
         factor_3d = np.linalg.norm(self.kp3ds[:, -1] - self.kp3ds[:, 13], axis=1).mean()
-        factor_filename = "../data/surreal_{}_factor_3d.pkl".format("train" if self.is_train else "test")
+        factor_filename = (
+            f'../data/surreal_{"train" if self.is_train else "test"}_factor_3d.pkl'
+        )
         if not self.use_same_norm_3d and not osp.exists(factor_filename):
             factor_3d = (np.tile(np.linalg.norm(self.kp3ds[:, -1] - self.kp3ds[:, 13], axis=1).reshape(-1, 1, 1), (1, 17, 3)) + 1e-8)
             with open(factor_filename, "wb") as f:
                 pkl.dump(factor_3d, f)
 
         fp.close()
-        print('finished load surreal {} data, total {} samples'.format("train" if self.is_train else "test", \
-            self.kp2ds.shape[0]))
+        print(
+            f'finished load surreal {"train" if self.is_train else "test"} data, total {self.kp2ds.shape[0]} samples'
+        )
 
         # get random diff1 
         self.diff_indices = []
@@ -95,8 +98,8 @@ class SurrealDataset(Dataset):
         # generate the rotation factors 
         num_examples = self.kp2ds.shape[0]
         np.random.seed(2019)
-        rotation_y = (2 * np.random.random_sample((num_examples, 1)) - 1) * self.bound_azim 
-        rotation_x = (2 * np.random.random_sample((num_examples, 1)) - 1) * self.bound_elev 
+        rotation_y = (2 * np.random.random_sample((num_examples, 1)) - 1) * self.bound_azim
+        rotation_x = (2 * np.random.random_sample((num_examples, 1)) - 1) * self.bound_elev
         rotation_z = (2 * np.random.random_sample((num_examples, 1)) - 1) * self.bound_elev / 2
         rotation_1 = np.concatenate((rotation_y, rotation_x, rotation_z), axis=1)
         rotation_2 = rotation_1.copy()

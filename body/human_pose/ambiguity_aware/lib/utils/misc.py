@@ -16,10 +16,10 @@ def create_logger(cfg, cfg_name):
     final_output_dir = root_output_dir / cfg_name
     print(f'=> creating {final_output_dir}')
     final_output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     time_str = time.strftime('%Y-%m-%d-%H-%M')
-    log_file = '{}_{}.log'.format(cfg_name, time_str)
-    final_log_file = final_output_dir / log_file 
+    log_file = f'{cfg_name}_{time_str}.log'
+    final_log_file = final_output_dir / log_file
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(filename=str(final_log_file), format=head)
     logger = logging.getLogger()
@@ -27,7 +27,7 @@ def create_logger(cfg, cfg_name):
     console = logging.StreamHandler()
     logging.getLogger('').addHandler(console)
 
-    tensorboard_log_dir = Path(cfg.LOG_DIR) / (cfg_name + "_" + time_str)
+    tensorboard_log_dir = Path(cfg.LOG_DIR) / f"{cfg_name}_{time_str}"
     print(f"=> creating {tensorboard_log_dir}")
     tensorboard_log_dir.mkdir(parents=True, exist_ok=True)
     return logger, str(final_output_dir), str(tensorboard_log_dir)
@@ -37,10 +37,7 @@ def init_weights(model):
         if isinstance(m, nn.Conv2d):
             n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
             m.weight.data.normal_(0, math.sqrt(2. / n))
-        elif isinstance(m, nn.BatchNorm2d):
-            m.weight.data.fill_(1)
-            m.bias.data.zero_()
-        elif isinstance(m, nn.BatchNorm1d):
+        elif isinstance(m, (nn.BatchNorm2d, nn.BatchNorm1d)):
             m.weight.data.fill_(1)
             m.bias.data.zero_()
         elif isinstance(m, nn.Linear):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding=utf-8
 
-import h5py 
+import h5py
 import numpy as np
 import pickle as pkl
 
@@ -14,10 +14,8 @@ joints_3d_gt = np.array(f['joint_3d_gt'])[:, v3d_to_ours]
 f.close()
 
 factor_path = "../data/h36m_test_factor_3d.pkl"
-f = open(factor_path, "rb")
-factors = pkl.load(f)
-f.close()
-
+with open(factor_path, "rb") as f:
+    factors = pkl.load(f)
 joints_2d_pre[:, :, 0] = (joints_2d_pre[:, :, 0] - 514.0435) / 500.0
 joints_2d_pre[:, :, 1] = (joints_2d_pre[:, :, 1] - 506.7003) / 500.0
 root2d = joints_2d_pre[:, 13:14].copy()
@@ -45,7 +43,7 @@ y1_min, y1_max = joints_2d_pre[..., 1:].min(axis=1, keepdims=True), joints_2d_pr
 x2_min, x2_max = project_gt_2d[..., 0:1].min(axis=1, keepdims=True), project_gt_2d[..., 0:1].max(axis=1, keepdims=True)
 y2_min, y2_max = project_gt_2d[..., 1:].min(axis=1, keepdims=True), project_gt_2d[..., 1:].max(axis=1, keepdims=True)
 ws = x1_max - x1_min
-hs = y1_max - y1_min 
+hs = y1_max - y1_min
 hws = (hs + ws) / 2
 scales = ((x2_max - x2_min) / (x1_max - x1_min) + (y2_max - y2_min) / (y1_max - y1_min)) / 2
 scale_mids = (scales + hws) / 2

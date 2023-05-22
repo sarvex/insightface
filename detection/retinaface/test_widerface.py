@@ -74,8 +74,7 @@ def parse_args():
     #parser.add_argument('--bbox-vote', help='', action='store_true')
     parser.add_argument('--part', help='', default=0, type=int)
     parser.add_argument('--parts', help='', default=1, type=int)
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 detector = None
@@ -87,6 +86,7 @@ def get_boxes(roi, pyramid):
     global imgid
     im = cv2.imread(roi['image'])
     do_flip = False
+    im_shape = im.shape
     if not pyramid:
         target_size = 1200
         max_size = 1600
@@ -95,9 +95,8 @@ def get_boxes(roi, pyramid):
         max_size = 2000
         target_size = 1600
         max_size = 2150
-        im_shape = im.shape
-        im_size_min = np.min(im_shape[0:2])
-        im_size_max = np.max(im_shape[0:2])
+        im_size_min = np.min(im_shape[:2])
+        im_size_max = np.max(im_shape[:2])
         im_scale = float(target_size) / float(im_size_min)
         # prevent bigger axis from being more than max_size:
         if np.round(im_scale * im_size_max) > max_size:
@@ -109,9 +108,8 @@ def get_boxes(roi, pyramid):
         TEST_SCALES = [500, 800, 1100, 1400, 1700]
         target_size = 800
         max_size = 1200
-        im_shape = im.shape
-        im_size_min = np.min(im_shape[0:2])
-        im_size_max = np.max(im_shape[0:2])
+        im_size_min = np.min(im_shape[:2])
+        im_size_max = np.max(im_shape[:2])
         im_scale = float(target_size) / float(im_size_min)
         # prevent bigger axis from being more than max_size:
         if np.round(im_scale * im_size_max) > max_size:
@@ -128,7 +126,7 @@ def get_boxes(roi, pyramid):
         font = cv2.FONT_HERSHEY_SIMPLEX
         for i in range(boxes.shape[0]):
             box = boxes[i]
-            ibox = box[0:4].copy().astype(np.int)
+            ibox = box[:4].copy().astype(np.int)
             cv2.rectangle(im, (ibox[0], ibox[1]), (ibox[2], ibox[3]),
                           (255, 0, 0), 2)
             #print('box', ibox)
@@ -146,7 +144,7 @@ def get_boxes(roi, pyramid):
                     color = (0, 255, 0)
                     landmark = landmarks[i][l]
                     pp = (int(landmark[0]), int(landmark[1]))
-                    if landmark[2] - 0.5 < 0.0:
+                    if landmark[2] < 0.5:
                         color = (0, 0, 255)
                     cv2.circle(im, (pp[0], pp[1]), 1, color, 2)
         filename = './testimages/%d.jpg' % imgid
@@ -251,7 +249,7 @@ def main():
     elif args.mode == 2:
         args.pyramid = True
         args.bbox_vote = False
-    logger.info('Called with argument: %s' % args)
+    logger.info(f'Called with argument: {args}')
     test(args)
 
 

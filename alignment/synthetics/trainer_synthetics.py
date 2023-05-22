@@ -24,9 +24,7 @@ class FaceSynthetics(pl.LightningModule):
         self.hard_mining = False
 
     def forward(self, x):
-        # use forward for inference/predictions
-        y = self.backbone(x)
-        return y
+        return self.backbone(x)
 
     def training_step(self, batch, batch_idx):
         x, y = batch

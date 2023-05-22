@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding=utf-8
 
-import h5py 
+import h5py
 import numpy as np
 import pickle as pkl
 
@@ -16,9 +16,8 @@ joints_3d_gt = np.array(f['joint_3d_gt'])
 f.close()
 
 factor_path = "../data/h36m_test_factor_3d.pkl"
-f = open(factor_path, "rb")
-factors = pkl.load(f)
-f.close()
+with open(factor_path, "rb") as f:
+    factors = pkl.load(f)
 factors = 0.680019
 
 # joints_2d_gt[:, :, 0] = (joints_2d_gt[:, :, 0] - 514.0435) / 500.0
@@ -62,7 +61,7 @@ print("Projection GT error is: {:.4f}".format(err_gt))
 # first descale, minus the root, and shift 
 joints_3d_pre = joints_3d_pre / factors
 root3d_pre = joints_3d_pre[:, 13:14].copy()
-joints_3d_pre = joints_3d_pre - root3d_pre + shift 
+joints_3d_pre = joints_3d_pre - root3d_pre + shift
 project_pre_2d = joints_3d_pre[..., :2] / joints_3d_pre[..., 2:]
 err_pre = np.linalg.norm(project_pre_2d - joints_2d_gt, axis=-1).mean()
 print("Projection PRE error is: {:.4f}".format(err_pre))

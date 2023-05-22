@@ -30,10 +30,7 @@ image_size = (args.image_size, args.image_size)
 config.landmark_type = args.landmark_type
 config.input_img_size = image_size[0]
 
-if ctx_id >= 0:
-    ctx = mx.gpu(ctx_id)
-else:
-    ctx = mx.cpu()
+ctx = mx.gpu(ctx_id) if ctx_id >= 0 else mx.cpu()
 sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
 all_layers = sym.get_internals()
 sym = all_layers['heatmap_output']

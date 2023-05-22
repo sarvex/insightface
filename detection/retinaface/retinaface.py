@@ -41,7 +41,7 @@ class RetinaFace:
         self.preprocess = False
         _ratio = (1., )
         fmc = 3
-        if network == 'ssh' or network == 'vgg':
+        if network in ['ssh', 'vgg']:
             pixel_means = [103.939, 116.779, 123.68]
             self.preprocess = True
         elif network == 'net3':
@@ -74,7 +74,7 @@ class RetinaFace:
             pixel_means = [103.52, 116.28, 123.675]
             pixel_stds = [57.375, 57.12, 58.395]
         else:
-            assert False, 'network setting error %s' % network
+            assert False, f'network setting error {network}'
 
         if fmc == 3:
             self._feat_stride_fpn = [32, 16, 8]
@@ -126,6 +126,25 @@ class RetinaFace:
                     'ALLOWED_BORDER': 9999
                 },
             }
+        elif fmc == 5:
+            self._feat_stride_fpn = [64, 32, 16, 8, 4]
+            self.anchor_cfg = {}
+            _ass = 2.0**(1.0 / 3)
+            _basescale = 1.0
+            for _stride in [4, 8, 16, 32, 64]:
+                key = str(_stride)
+                value = {
+                    'BASE_SIZE': 16,
+                    'RATIOS': _ratio,
+                    'ALLOWED_BORDER': 9999
+                }
+                scales = []
+                for _ in range(3):
+                    scales.append(_basescale)
+                    _basescale *= _ass
+                value['SCALES'] = tuple(scales)
+                self.anchor_cfg[key] = value
+
         elif fmc == 6:
             self._feat_stride_fpn = [128, 64, 32, 16, 8, 4]
             self.anchor_cfg = {
@@ -166,29 +185,10 @@ class RetinaFace:
                     'ALLOWED_BORDER': 9999
                 },
             }
-        elif fmc == 5:
-            self._feat_stride_fpn = [64, 32, 16, 8, 4]
-            self.anchor_cfg = {}
-            _ass = 2.0**(1.0 / 3)
-            _basescale = 1.0
-            for _stride in [4, 8, 16, 32, 64]:
-                key = str(_stride)
-                value = {
-                    'BASE_SIZE': 16,
-                    'RATIOS': _ratio,
-                    'ALLOWED_BORDER': 9999
-                }
-                scales = []
-                for _ in range(3):
-                    scales.append(_basescale)
-                    _basescale *= _ass
-                value['SCALES'] = tuple(scales)
-                self.anchor_cfg[key] = value
-
         print(self._feat_stride_fpn, self.anchor_cfg)
 
         for s in self._feat_stride_fpn:
-            self.fpn_keys.append('stride%s' % s)
+            self.fpn_keys.append(f'stride{s}')
 
         dense_anchor = False
         #self._anchors_fpn = dict(zip(self.fpn_keys, generate_anchors_fpn(base_size=fpn_base_size, scales=self._scales, ratios=self._ratios)))
@@ -215,7 +215,7 @@ class RetinaFace:
             self.nms = cpu_nms_wrapper(self.nms_threshold)
         self.pixel_means = np.array(pixel_means, dtype=np.float32)
         self.pixel_stds = np.array(pixel_stds, dtype=np.float32)
-        self.pixel_scale = float(pixel_scale)
+        self.pixel_scale = pixel_scale
         print('means', self.pixel_means)
         self.use_landmarks = False
         if len(sym) // len(self._feat_stride_fpn) >= 3:
@@ -253,12 +253,7 @@ class RetinaFace:
                 0,
                 i, :, :] = (im[:, :, 2 - i] / self.pixel_scale -
                             self.pixel_means[2 - i]) / self.pixel_stds[2 - i]
-        #if self.debug:
-        #  timeb = datetime.datetime.now()
-        #  diff = timeb - timea
-        #  print('X2 uses', diff.total_seconds(), 'seconds')
-        data = nd.array(im_tensor)
-        return data
+        return nd.array(im_tensor)
 
     def detect(self, img, threshold=0.5, scales=[1.0], do_flip=False):
         #print('in_detect', threshold, scales, do_flip, do_nms)

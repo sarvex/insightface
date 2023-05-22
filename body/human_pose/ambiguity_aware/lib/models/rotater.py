@@ -27,7 +27,6 @@ class Rotater(nn.Module):
         if self.output_size == 3: 
             # pre euler
             out = torch.clamp(out, min=-3.14159/2, max=3.14159/2)
-            pass
         else: 
             # pre rotation matrix
             out = torch.clamp(out, min=-1.0, max=1.0)
@@ -35,9 +34,14 @@ class Rotater(nn.Module):
 
 def get_rotater(cfg):
     num_res_blocks = cfg.NETWORK.ROTATER_RES_BLOCKS
-    num_channels = cfg.NETWORK.NUM_CHANNELS 
-    bn_track = cfg.NETWORK.BN_TRACK 
+    num_channels = cfg.NETWORK.NUM_CHANNELS
+    bn_track = cfg.NETWORK.BN_TRACK
     dropout = cfg.NETWORK.DROPOUT
     is_euler = cfg.NETWORK.ROTATER_PRE_EULER
-    rotater = Rotater(is_euler=is_euler, num_channels=num_channels, num_res_blocks=num_res_blocks, dropout=dropout, bn_track=bn_track)
-    return rotater
+    return Rotater(
+        is_euler=is_euler,
+        num_channels=num_channels,
+        num_res_blocks=num_res_blocks,
+        dropout=dropout,
+        bn_track=bn_track,
+    )

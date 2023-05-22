@@ -23,13 +23,7 @@ def get_fixed_params(symbol, fixed_param):
     if not config.LAYER_FIX:
         return []
     fixed_param_names = []
-    #for name in symbol.list_arguments():
-    #  for f in fixed_param:
-    #    if re.match(f, name):
-    #      fixed_param_names.append(name)
-    #pre = 'mobilenetv20_features_linearbottleneck'
-    idx = 0
-    for name in symbol.list_arguments():
+    for idx, name in enumerate(symbol.list_arguments()):
         #print(idx, name)
         if idx < 7 and name != 'data':
             fixed_param_names.append(name)
@@ -38,7 +32,6 @@ def get_fixed_params(symbol, fixed_param):
         if name.find('upsampling') >= 0:
             fixed_param_names.append(name)
 
-        idx += 1
     return fixed_param_names
 
 
@@ -62,7 +55,7 @@ def train_net(args,
     logger.info(pprint.pformat(config))
 
     # load dataset and prepare imdb for training
-    image_sets = [iset for iset in args.image_set.split('+')]
+    image_sets = list(args.image_set.split('+'))
     roidbs = [
         load_gt_roidb(args.dataset,
                       image_set,
@@ -103,12 +96,13 @@ def train_net(args,
         #    arg_params[_k] = mx.nd.zeros(shape=arg_shape_dict[_k])
         #    print('init %s with zero'%(_k))
 
-    sym = eval('get_' + args.network + '_train')(sym)
+    sym = eval(f'get_{args.network}_train')(sym)
     #print(sym.get_internals())
     feat_sym = []
     for stride in config.RPN_FEAT_STRIDE:
         feat_sym.append(
-            sym.get_internals()['face_rpn_cls_score_stride%s_output' % stride])
+            sym.get_internals()[f'face_rpn_cls_score_stride{stride}_output']
+        )
 
     train_data = CropLoader(feat_sym,
                             roidb,
@@ -118,13 +112,21 @@ def train_net(args,
                             work_load_list=args.work_load_list)
 
     # infer max shape
-    max_data_shape = [('data', (1, 3, max([v[1] for v in config.SCALES]),
-                                max([v[1] for v in config.SCALES])))]
+    max_data_shape = [
+        (
+            'data',
+            (
+                1,
+                3,
+                max(v[1] for v in config.SCALES),
+                max(v[1] for v in config.SCALES),
+            ),
+        )
+    ]
     #max_data_shape = [('data', (1, 3, max([v[1] for v in config.SCALES]), max([v[1] for v in config.SCALES])))]
     max_data_shape, max_label_shape = train_data.infer_shape(max_data_shape)
     max_data_shape.append(('gt_boxes', (1, roidb[0]['max_num_boxes'], 5)))
-    logger.info('providing maximum shape %s %s' %
-                (max_data_shape, max_label_shape))
+    logger.info(f'providing maximum shape {max_data_shape} {max_label_shape}')
 
     # infer shape
     data_shape_dict = dict(train_data.provide_data + train_data.provide_label)
@@ -132,7 +134,7 @@ def train_net(args,
     arg_shape_dict = dict(zip(sym.list_arguments(), arg_shape))
     out_shape_dict = dict(zip(sym.list_outputs(), out_shape))
     aux_shape_dict = dict(zip(sym.list_auxiliary_states(), aux_shape))
-    logger.info('output shape %s' % pprint.pformat(out_shape_dict))
+    logger.info(f'output shape {pprint.pformat(out_shape_dict)}')
 
     for k in arg_shape_dict:
         v = arg_shape_dict[k]
@@ -175,39 +177,41 @@ def train_net(args,
     for m in range(len(config.RPN_FEAT_STRIDE)):
         stride = config.RPN_FEAT_STRIDE[m]
         #mid = m*MSTEP
-        _metric = metric.RPNAccMetric(pred_idx=mid,
-                                      label_idx=mid + 1,
-                                      name='RPNAcc_s%s' % stride)
+        _metric = metric.RPNAccMetric(
+            pred_idx=mid, label_idx=mid + 1, name=f'RPNAcc_s{stride}'
+        )
         eval_metrics.add(_metric)
         mid += 2
         #_metric = metric.RPNLogLossMetric(pred_idx=mid, label_idx=mid+1)
         #eval_metrics.add(_metric)
 
-        _metric = metric.RPNL1LossMetric(loss_idx=mid,
-                                         weight_idx=mid + 1,
-                                         name='RPNL1Loss_s%s' % stride)
+        _metric = metric.RPNL1LossMetric(
+            loss_idx=mid, weight_idx=mid + 1, name=f'RPNL1Loss_s{stride}'
+        )
         eval_metrics.add(_metric)
         mid += 2
         if config.FACE_LANDMARK:
-            _metric = metric.RPNL1LossMetric(loss_idx=mid,
-                                             weight_idx=mid + 1,
-                                             name='RPNLandMarkL1Loss_s%s' %
-                                             stride)
+            _metric = metric.RPNL1LossMetric(
+                loss_idx=mid,
+                weight_idx=mid + 1,
+                name=f'RPNLandMarkL1Loss_s{stride}',
+            )
             eval_metrics.add(_metric)
             mid += 2
         if config.HEAD_BOX:
-            _metric = metric.RPNAccMetric(pred_idx=mid,
-                                          label_idx=mid + 1,
-                                          name='RPNAcc_head_s%s' % stride)
+            _metric = metric.RPNAccMetric(
+                pred_idx=mid, label_idx=mid + 1, name=f'RPNAcc_head_s{stride}'
+            )
             eval_metrics.add(_metric)
             mid += 2
             #_metric = metric.RPNLogLossMetric(pred_idx=mid, label_idx=mid+1)
             #eval_metrics.add(_metric)
 
-            _metric = metric.RPNL1LossMetric(loss_idx=mid,
-                                             weight_idx=mid + 1,
-                                             name='RPNL1Loss_head_s%s' %
-                                             stride)
+            _metric = metric.RPNL1LossMetric(
+                loss_idx=mid,
+                weight_idx=mid + 1,
+                name=f'RPNL1Loss_head_s{stride}',
+            )
             eval_metrics.add(_metric)
             mid += 2
         if config.CASCADE > 0:
@@ -252,7 +256,7 @@ def train_net(args,
         for i in range(5):
             lr_steps.append((lr_iters[i], factors[i]))
     elif len(lr_iters) == 8:  #warmup
-        for li in lr_iters[0:5]:
+        for li in lr_iters[:5]:
             lr_steps.append((li, 1.5849))
         for li in lr_iters[5:]:
             lr_steps.append((li, 0.1))
@@ -475,14 +479,13 @@ def parse_args():
 
 def main():
     args = parse_args()
-    logger.info('Called with argument: %s' % args)
+    logger.info(f'Called with argument: {args}')
     #ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')]
     ctx = []
     cvd = os.environ['CUDA_VISIBLE_DEVICES'].strip()
     if len(cvd) > 0:
-        for i in range(len(cvd.split(','))):
-            ctx.append(mx.gpu(i))
-    if len(ctx) == 0:
+        ctx.extend(mx.gpu(i) for i in range(len(cvd.split(','))))
+    if not ctx:
         ctx = [mx.cpu()]
         print('use cpu')
     else:

@@ -41,7 +41,7 @@ class FaceSegIter(DataIter):
         self.label_name = label_name
         assert path_imgrec
         logging.info('loading recordio %s...', path_imgrec)
-        path_imgidx = path_imgrec[0:-4] + ".idx"
+        path_imgidx = f"{path_imgrec[:-4]}.idx"
         self.imgrec = mx.recordio.MXIndexedRecordIO(path_imgidx, path_imgrec,
                                                     'r')  # pylint: disable=redefined-variable-type
         self.oseq = list(self.imgrec.keys)
@@ -51,25 +51,16 @@ class FaceSegIter(DataIter):
         self.data_shape = (3, config.input_img_size, config.input_img_size)
         self.num_classes = config.num_classes
         self.input_img_size = config.input_img_size
+        if aug_level > 0:
+            self.output_label_size = config.output_label_size
+        else:
+            self.output_label_size = self.input_img_size
         #self.label_classes = self.num_classes
         if config.losstype == 'heatmap':
-            if aug_level > 0:
-                self.output_label_size = config.output_label_size
-                self.label_shape = (self.num_classes, self.output_label_size,
-                                    self.output_label_size)
-            else:
-                self.output_label_size = self.input_img_size
-                #self.label_shape = (self.num_classes, 2)
-                self.label_shape = (self.num_classes, self.output_label_size,
-                                    self.output_label_size)
+            self.label_shape = (self.num_classes, self.output_label_size,
+                                self.output_label_size)
         else:
-            if aug_level > 0:
-                self.output_label_size = config.output_label_size
-                self.label_shape = (self.num_classes, 2)
-            else:
-                self.output_label_size = self.input_img_size
-                #self.label_shape = (self.num_classes, 2)
-                self.label_shape = (self.num_classes, 2)
+            self.label_shape = (self.num_classes, 2)
         self.provide_data = [(data_name, (batch_size, ) + self.data_shape)]
         self.provide_label = [(label_name, (batch_size, ) + self.label_shape)]
         self.img_num = 0
@@ -123,18 +114,13 @@ class FaceSegIter(DataIter):
     #    return self.label_shape
 
     def get_shape_dict(self):
-        D = {}
-        for (k, v) in self.provide_data:
-            D[k] = v
+        D = dict(self.provide_data)
         for (k, v) in self.provide_label:
             D[k] = v
         return D
 
     def get_label_names(self):
-        D = []
-        for (k, v) in self.provide_label:
-            D.append(k)
-        return D
+        return [k for k, v in self.provide_label]
 
     def reset(self):
         #print('reset')
@@ -206,9 +192,7 @@ class FaceSegIter(DataIter):
             center = annot['center']
         else:
             center = np.array((data.shape[1] / 2, data.shape[0] / 2))
-        max_retry = 3
-        if self.aug_level == 0:  #validation mode
-            max_retry = 6
+        max_retry = 6 if self.aug_level == 0 else 3
         retry = 0
         found = False
         base_scale = scale

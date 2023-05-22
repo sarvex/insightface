@@ -46,7 +46,7 @@ class LSPDataset(Dataset):
         for index in range(len(self.joints)): 
             if index + 1 not in [1003, 1120, 1262, 1273, 1312, 1379, 1639, 1723, 1991, 209, 387, 879]: 
                 continue
-            with open("demo_input/" + str(index + 1) + ".pkl", "wb") as f: 
+            with open(f"demo_input/{str(index + 1)}.pkl", "wb") as f: 
                 pkl.dump({'joints_2d': self.joints[index], "original_joints_2d": self.original_joints[index]}, f)
 
     def __getitem__(self, index): 

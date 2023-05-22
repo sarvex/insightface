@@ -13,10 +13,7 @@ from mtcnn_detector import MtcnnDetector
 class Handler:
     def __init__(self, prefix, epoch, ctx_id=0):
         print('loading', prefix, epoch)
-        if ctx_id >= 0:
-            ctx = mx.gpu(ctx_id)
-        else:
-            ctx = mx.cpu()
+        ctx = mx.gpu(ctx_id) if ctx_id >= 0 else mx.cpu()
         sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
         all_layers = sym.get_internals()
         sym = all_layers['heatmap_output']
@@ -86,9 +83,9 @@ IM = cv2.invertAffineTransform(M)
 for i in range(landmark.shape[0]):
     p = landmark[i]
     point = np.ones((3, ), dtype=np.float32)
-    point[0:2] = p
+    point[:2] = p
     point = np.dot(IM, point)
-    landmark[i] = point[0:2]
+    landmark[i] = point[:2]
 
 for i in range(landmark.shape[0]):
     p = landmark[i]

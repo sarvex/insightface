@@ -17,10 +17,7 @@ import numpy as np
 from mxnet.contrib import onnx as onnx_mxnet
 
 def create_map(graph_member_list):
-    member_map={}
-    for n in graph_member_list:
-        member_map[n.name]=n
-    return member_map
+    return {n.name: n for n in graph_member_list}
 
 
 parser = argparse.ArgumentParser(description='convert arcface models to onnx')
@@ -30,13 +27,13 @@ parser.add_argument('output', default='./r100a.onnx', help='path to write onnx m
 parser.add_argument('--eps', default=1.0e-8, type=float, help='eps for weights.')
 parser.add_argument('--input-shape', default='3,112,112', help='input shape.')
 args = parser.parse_args()
-input_shape = (1,) + tuple( [int(x) for x in args.input_shape.split(',')] )
+input_shape = (1,) + tuple(int(x) for x in args.input_shape.split(','))
 
 params_file = args.params
 pos = params_file.rfind('-')
 prefix = params_file[:pos]
 epoch = int(params_file[pos+1:pos+5])
-sym_file = prefix + "-symbol.json"
+sym_file = f"{prefix}-symbol.json"
 assert os.path.exists(sym_file)
 assert os.path.exists(params_file)
 
@@ -70,9 +67,7 @@ for k in aux_params:
 print(invalid, ac)
 aux_params = aux
 
-all_args = {}
-all_args.update(arg_params)
-all_args.update(aux_params)
+all_args = arg_params | aux_params
 converted_model_path = onnx_mxnet.export_model(sym, all_args, [input_shape], np.float32, args.output, opset_version=11)
 
 model = onnx.load(args.output)
@@ -85,20 +80,18 @@ init_map = create_map(graph.initializer)
 for input_name in input_map.keys():
     if input_name.endswith('_gamma'):
         node_name = input_name[:-6]
-        if not node_name in node_map:
+        if node_name not in node_map:
             continue
         node = node_map[node_name]
         if node.op_type!='PRelu':
             continue
         input_shape = input_map[input_name].type.tensor_type.shape.dim
         input_dim_val=input_shape[0].dim_value
-        
+
         graph.initializer.remove(init_map[input_name])
         weight_array = numpy_helper.to_array(init_map[input_name])
-        
-        b=[]
-        for w in weight_array:
-            b.append(w)
+
+        b = list(weight_array)
         new_nv = helper.make_tensor(input_name, TensorProto.FLOAT, [input_dim_val,1,1], b)
         graph.initializer.extend([new_nv])
 

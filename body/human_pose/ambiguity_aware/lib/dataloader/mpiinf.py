@@ -36,7 +36,7 @@ class MPIINFDataset(Dataset):
 
     def _load_data_set(self):
         if self.is_train:
-            print('start loading mpiinf {} data.'.format("train" if self.is_train else "test"))
+            print(f'start loading mpiinf {"train" if self.is_train else "test"} data.')
         key = "joint_2d_gt" if self.use_gt else "joint_2d_pre"
         fp = h5py.File(self.data_path, "r")
         self.kp2ds = np.array(fp[key])[:, self.mpi2h36m, :2]
@@ -67,36 +67,36 @@ class MPIINFDataset(Dataset):
 
         self.kp3ds = np.array(fp['joint_3d_gt'])[:, self.mpi2h36m, :3] / 1000.0
         # factor_3d = np.linalg.norm(self.kp3ds[:, -1] - self.kp3ds[:, 13], axis=1).mean())
-        factor_filename = "../data/mpi_{}_factor_3d.pkl".format("train" if self.is_train else "test")
+        factor_filename = (
+            f'../data/mpi_{"train" if self.is_train else "test"}_factor_3d.pkl'
+        )
         if not self.use_same_norm_3d:
             factor_3d = (np.tile(np.linalg.norm(self.kp3ds[:, -1] - self.kp3ds[:, 13], axis=1).reshape(-1, 1, 1), (1, 17, 3)) + 1e-8)
             print(factor_3d.shape)
             with open(factor_filename, "wb") as f:
                 pkl.dump(factor_3d, f)
-        
+
         if osp.exists(self.scale_path):
             with open(self.scale_path, "rb") as f:
                 self.scales = pkl.load(f)['scale']
         else:
-            if self.use_scaler:
-                pass
-                # raise Warning("You haven't generated the computed scales, if you don't need to observe the scale error during training, \njust ignore this warning because it won't affect training.")
             self.scales = None
 
         if self.use_ideal_scale: 
-            # scales computed from projection of 3d 
-            with open("../data/mpi_{}_scales.pkl".format("train" if self.is_train else "valid"), "rb") as f:
+            # scales computed from projection of 3d
+            with open(f'../data/mpi_{"train" if self.is_train else "valid"}_scales.pkl', "rb") as f:
                 scales = pkl.load(f)
             self.kp2ds = self.kp2ds * scales
 
         fp.close()
-        print('finished load mpiinf {} data, total {} samples'.format("train" if self.is_train else "test", \
-            self.kp2ds.shape[0]))
+        print(
+            f'finished load mpiinf {"train" if self.is_train else "test"} data, total {self.kp2ds.shape[0]} samples'
+        )
 
         # generate the rotation factors 
         num_examples = self.kp2ds.shape[0]
-        rotation_y = (2 * np.random.random_sample((num_examples, 1)) - 1) * self.bound_azim 
-        rotation_x = (2 * np.random.random_sample((num_examples, 1)) - 1) * self.bound_elev 
+        rotation_y = (2 * np.random.random_sample((num_examples, 1)) - 1) * self.bound_azim
+        rotation_x = (2 * np.random.random_sample((num_examples, 1)) - 1) * self.bound_elev
         rotation_z = (2 * np.random.random_sample((num_examples, 1)) - 1) * self.bound_elev / 2
         rotation_1 = np.concatenate((rotation_y, rotation_x, rotation_z), axis=1)
         rotation_2 = rotation_1.copy()
@@ -121,12 +121,11 @@ class MPIINFDataset(Dataset):
         index_in_seq = self.indices_in_seq[index]
         kps_3d = self.kp3ds[index]
         rot = self.rotation[index]
+        kps_2d = self.kp2ds[index]
         if not self.is_train: 
-            kps_2d = self.kp2ds[index]
             # don't use
             diff1 = diff2 = self.kp2ds[index]
         else:
-            kps_2d = self.kp2ds[index]
             if self.frame_interval + index < seq_len:
                 diff1_index = index + self.frame_interval
             else: 
@@ -136,14 +135,11 @@ class MPIINFDataset(Dataset):
             diff_dist = np.random.randint(-index_in_seq, seq_len - index_in_seq)
             while abs(diff_dist) < self.min_diff_dist: 
                 diff_dist = np.random.randint(-index_in_seq, seq_len - index_in_seq)
-            diff2_index = index + diff_dist 
+            diff2_index = index + diff_dist
             diff2 = self.kp2ds[diff2_index]
 
         rot = self.rotation[index]
         # for valdiation, simply ignore scale
-        if self.scales is None or not self.is_train: 
-            scale = 0
-        else:
-            scale = self.scales[index]
+        scale = 0 if self.scales is None or not self.is_train else self.scales[index]
         return kps_2d, kps_3d, rot, diff1, diff2, scale
 

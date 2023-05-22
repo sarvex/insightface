@@ -62,13 +62,11 @@ class Lifter(nn.Module):
             joints_in = joints_2d.view(bs, -1)
         else:
             joints_in = torch.cat([joints_2d.view(bs, -1), root_3d.view(bs, -1)], -1)
-            
+
         x = self.pre(joints_in)
         for block in self.blocks:
             x = block(x, joints_in)
-        xyz = []
-        for branch in self.branches: 
-            xyz.append(branch(x, joints_in))
+        xyz = [branch(x, joints_in) for branch in self.branches]
         out = torch.cat(xyz, -1)
         out = out.view(out.size(0), self.num_joints, self.num_xyz)
         return out 
@@ -80,8 +78,14 @@ def get_lifter(num_joints, num_feats=2, num_xyz=1, num_channels=1024, num_res_bl
     return lifter
 
 def get_lifter_before(num_joints, num_feats=2, num_channels=1024, num_res_blocks=2, dropout=0.25, bn_track=True):
-    lifter_before = LifterBefore(num_joints, num_feats, num_channels, num_res_blocks, dropout=dropout, bn_track=bn_track)
-    return lifter_before
+    return LifterBefore(
+        num_joints,
+        num_feats,
+        num_channels,
+        num_res_blocks,
+        dropout=dropout,
+        bn_track=bn_track,
+    )
 
 def get_lifter_after(num_joints, num_feats=2, num_xyz=1, num_channels=1024, is_generic_baseline=False): 
     output_size = num_joints

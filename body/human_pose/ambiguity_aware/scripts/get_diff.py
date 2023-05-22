@@ -1,5 +1,5 @@
-import numpy as np 
-import h5py 
+import numpy as np
+import h5py
 import argparse 
 
 np.random.seed(2019)
@@ -25,8 +25,10 @@ if use_random:
 if use_pre: 
     suffix += "_pre"
 
-in_filename = "../data/h36m_{}_pred3.h5".format("train" if is_train else "valid")
-out_filename = "../data/h36m_{}_diff{}.h5".format("train" if is_train else "valid", suffix)
+in_filename = f'../data/h36m_{"train" if is_train else "valid"}_pred3.h5'
+out_filename = (
+    f'../data/h36m_{"train" if is_train else "valid"}_diff{suffix}.h5'
+)
 
 f = h5py.File(in_filename, "r")
 names = [name.decode() for name in f['imagename'][:]]
@@ -85,7 +87,7 @@ dist = np.linalg.norm((joints_2d - diff).reshape(size, -1), axis=1).mean()
 print("Mean distance bewteen diff and original: {:.3f}".format(dist))
 
 f = h5py.File(out_filename, "w")
-f['gt_diff'] = diff 
+f['gt_diff'] = diff
 # f['gt_diff_type'] = diff_types
 f.close()
 print("Saved to", out_filename)

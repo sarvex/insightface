@@ -8,17 +8,18 @@ parents = [1, 2, 13, 13, 3, 4, 7, 8, 12, 12, 9, 10, 14, 13, 13, 12, 15]
 bone_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16]
 
 def kl_criterion(mu1, sigma1, mu2, sigma2, mean_only=False):
-    if mean_only: 
-        kld = (mu1 - mu2)**2 / (2*sigma2**2)
-    else:
-        kld = torch.log(sigma2/sigma1) + (sigma1**2 + (mu1 - mu2)**2)/(2*sigma2**2) - 1/2
-    return kld
+    return (
+        (mu1 - mu2) ** 2 / (2 * sigma2**2)
+        if mean_only
+        else torch.log(sigma2 / sigma1)
+        + (sigma1**2 + (mu1 - mu2) ** 2) / (2 * sigma2**2)
+        - 1 / 2
+    )
 
 def loss_bone(x, y):
     bones_x = (x - x[:, parents])[:, bone_indices]
     bones_y = (y - y[:, parents])[:, bone_indices]
-    loss_bone = (bones_x - bones_y).pow(2).sum(dim=-1).sqrt().mean()
-    return loss_bone
+    return (bones_x - bones_y).pow(2).sum(dim=-1).sqrt().mean()
 
 def loss_3d(pred3d, gt3d):
     # pred3d, gt_3d = pred3d[..., :3], gt3d[..., :3]
@@ -38,9 +39,7 @@ def loss_2d(pred2d, gt2d):
 def loss_gadv(fake_logits):
     loss_func = torch.nn.BCEWithLogitsLoss().cuda()
     fake_one = torch.ones_like(fake_logits).cuda()
-    loss_g = loss_func(fake_logits, fake_one)
-    # loss_g = loss_func(fake_one, fake_logits)
-    return loss_g
+    return loss_func(fake_logits, fake_one)
 
 def loss_dadv(real_logits, fake_logits):
     loss_func = torch.nn.BCEWithLogitsLoss().cuda()

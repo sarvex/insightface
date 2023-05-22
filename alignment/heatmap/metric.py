@@ -39,10 +39,8 @@ class NMEMetric(mx.metric.EvalMetric):
                 _heatmap = label[b][36]
                 if np.count_nonzero(_heatmap) == 0:
                     continue
-            else:  #ndim==3
-                #print(label[b])
-                if np.count_nonzero(label[b]) == 0:
-                    continue
+            elif np.count_nonzero(label[b]) == 0:
+                continue
             for p in range(pred_label.shape[1]):
                 if label.ndim == 4:
                     heatmap_gt = label[b][p]
@@ -85,13 +83,11 @@ class NMEMetric(mx.metric.EvalMetric):
                 left_eye = (record[0] + record[1]) / 2
                 right_eye = (record[2] + record[3]) / 2
                 _dist = np.sqrt(np.sum(np.square(left_eye - right_eye)))
-                #print('eye dist', _dist, left_eye, right_eye)
-                _nme /= _dist
             else:
                 #_dist = np.sqrt(float(label.shape[2]*label.shape[3]))
                 _dist = np.sqrt(np.sum(np.square(record[5] - record[4])))
-                #print(_dist)
-                _nme /= _dist
+            #print('eye dist', _dist, left_eye, right_eye)
+            _nme /= _dist
             nme.append(_nme)
         return np.mean(nme)
 

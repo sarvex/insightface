@@ -16,7 +16,7 @@ def transform(data, center, output_size, scale, rotation):
     t4 = stf.SimilarityTransform(translation=(output_size / 2,
                                               output_size / 2))
     t = t1 + t2 + t3 + t4
-    trans = t.params[0:2]
+    trans = t.params[:2]
     #print('M', scale, rotation, trans)
     cropped = cv2.warpAffine(data,
                              trans, (output_size, output_size),

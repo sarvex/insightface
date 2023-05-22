@@ -58,11 +58,9 @@ for i in range(0, 100000):
     #    cv2.circle(aimg, (kps[l][0], kps[l][1]), 1, color, 2)
     x = x.replace('png', 'jpg')
     X.append(x)
-    y = []
-    for k in range(pred.shape[0]):
-        y.append( (pred[k][0], pred[k][1]) )
+    y = [(pred[k][0], pred[k][1]) for k in range(pred.shape[0])]
     Y.append(y)
-    cv2.imwrite("%s/%s"%(output_dir, x), aimg)
+    cv2.imwrite(f"{output_dir}/{x}", aimg)
 
 
 with open(osp.join(output_dir, 'annot.pkl'), 'wb') as pfile:

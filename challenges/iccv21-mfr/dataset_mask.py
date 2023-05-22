@@ -86,10 +86,7 @@ class MXFaceDataset(Dataset):
         for aug_mode_str in aug_mode_list:
             _aug = aug_mode_str.split('=')
             aug_key = _aug[0]
-            if len(_aug)>1:
-                aug_prob = float(_aug[1])
-            else:
-                aug_prob = default_aug_probs[aug_key]
+            aug_prob = float(_aug[1]) if len(_aug)>1 else default_aug_probs[aug_key]
             aug_mode_map[aug_key] = aug_prob
 
         transform_list = []
@@ -114,17 +111,15 @@ class MXFaceDataset(Dataset):
         key = 'blur'
         if key in aug_mode_map:
             prob = aug_mode_map[key]
-            transform_list.append(
-                A.ImageCompression(quality_lower=30, quality_upper=80, p=prob)
+            transform_list.extend(
+                (
+                    A.ImageCompression(quality_lower=30, quality_upper=80, p=prob),
+                    A.MedianBlur(blur_limit=(1, 7), p=prob),
+                    A.MotionBlur(blur_limit=(5, 12), p=prob),
                 )
-            transform_list.append(
-                A.MedianBlur(blur_limit=(1,7), p=prob)
-                )
-            transform_list.append(
-                A.MotionBlur(blur_limit=(5,12), p=prob)
-                )
+            )
         transform_list += \
-            [
+                [
                 A.HorizontalFlip(p=0.5),
                 A.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
                 ToTensorV2(),
@@ -142,11 +137,8 @@ class MXFaceDataset(Dataset):
         header, _ = mx.recordio.unpack(s)
         #print(header)
         #print(len(self.imgrec.keys))
-        if header.flag > 0:
-            if len(header.label)==2:
-                self.imgidx = np.array(range(1, int(header.label[0])))
-            else:
-                self.imgidx = np.array(list(self.imgrec.keys))
+        if header.flag > 0 and len(header.label) == 2:
+            self.imgidx = np.array(range(1, int(header.label[0])))
         else:
             self.imgidx = np.array(list(self.imgrec.keys))
         #print('imgidx len:', len(self.imgidx))
@@ -158,10 +150,7 @@ class MXFaceDataset(Dataset):
         hlabel = header.label
         #print('hlabel:', hlabel.__class__)
         sample = mx.image.imdecode(img).asnumpy()
-        if not isinstance(hlabel, numbers.Number):
-            idlabel = hlabel[0]
-        else:
-            idlabel = hlabel
+        idlabel = hlabel[0] if not isinstance(hlabel, numbers.Number) else hlabel
         label = torch.tensor(idlabel, dtype=torch.long)
         if self.transform is not None:
             sample = self.transform(image=sample, hlabel=hlabel)['image']
@@ -198,10 +187,7 @@ if __name__ == "__main__":
     #)
     fig = np.zeros( (112*rows, 112*cols, 3), dtype=np.uint8 )
     for idx in range(samples):
-        if idx%2==0:
-            image, _ = dataset_0[idx//2]
-        else:
-            image, _ = dataset_1[idx//2]
+        image, _ = dataset_0[idx//2] if idx%2==0 else dataset_1[idx//2]
         row_idx = idx // cols
         col_idx = idx % cols
         fig[row_idx*112:(row_idx+1)*112, col_idx*112:(col_idx+1)*112,:] = image[:,:,::-1] # to bgr

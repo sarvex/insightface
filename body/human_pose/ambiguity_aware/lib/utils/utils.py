@@ -37,10 +37,7 @@ def rigid_align(predicted, target):
     a = tr * normX / normY  # Scale
     t = muX - a * np.matmul(muY, R)  # Translation
 
-    # Perform rigid transformation on the input
-    predicted_aligned = a * np.matmul(predicted, R) + t
-    # Return MPJPE
-    return predicted_aligned
+    return a * np.matmul(predicted, R) + t
 
 
 def p_mpjpe(predicted, target, rot=True, trans=True, scale=True):
@@ -79,13 +76,9 @@ def p_mpjpe(predicted, target, rot=True, trans=True, scale=True):
     t = muX - a * np.matmul(muY, R)  # Translation
 
     # Perform rigid transformation on the input
-    if rot: 
-        predicted_aligned = np.matmul(predicted, R)
-    else: 
-        predicted_aligned = predicted
-
+    predicted_aligned = np.matmul(predicted, R) if rot else predicted
     if scale:
-        predicted_aligned = a * predicted_aligned 
+        predicted_aligned = a * predicted_aligned
     if trans: 
         predicted_aligned = predicted_aligned + t
     # predicted_aligned = a * np.matmul(predicted, R) + t
@@ -153,9 +146,7 @@ def euler2rotmat(eulers):
     matx = get_rotation_x(thetax)
     maty = get_rotation_y(thetay)
     matz = get_rotation_z(thetaz)
-    rotmat = matz.matmul(matx).matmul(maty)
-    # rotmat = maty.matmul(matx).matmul(matz)
-    return rotmat
+    return matz.matmul(matx).matmul(maty)
 
 def rotate(joints_3d, eulers):
     rotmat = euler2rotmat(eulers)
@@ -304,13 +295,12 @@ def load_checkpoint(model, optimizer, output_dir, filename='checkpoint.pth.tar')
         start_epoch = checkpoint['epoch']
         model.module.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        print('=> load checkpoint {} (epoch {})'
-              .format(file, start_epoch))
+        print(f'=> load checkpoint {file} (epoch {start_epoch})')
 
         return start_epoch, model, optimizer
 
     else:
-        print('=> no checkpoint found at {}'.format(file))
+        print(f'=> no checkpoint found at {file}')
         return 0, model, optimizer
 
 
@@ -366,8 +356,7 @@ def _scale_range(x, a, b):
     return (x - M)/(m - M)*(a - b) + b
 
 def calc_dists(joints_3d_pre, joints_3d_gt, head_size=300):
-    dists = 1000 / head_size * np.linalg.norm(joints_3d_pre - joints_3d_gt, axis=-1)
-    return dists
+    return 1000 / head_size * np.linalg.norm(joints_3d_pre - joints_3d_gt, axis=-1)
 
 def calc_pck3d(dists, threshold=0.5):
     n, c = dists.shape

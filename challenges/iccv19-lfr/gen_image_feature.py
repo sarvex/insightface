@@ -60,7 +60,7 @@ def get_feature(buffer):
         print('set emb_size to ', emb_size)
     embedding = np.zeros((len(buffer), emb_size), dtype=np.float32)
     if use_flip:
-        embedding1 = _embedding[0::2]
+        embedding1 = _embedding[::2]
         embedding2 = _embedding[1::2]
         embedding = embedding1 + embedding2
     else:
@@ -84,9 +84,8 @@ def main(args):
     ctx = []
     cvd = os.environ['CUDA_VISIBLE_DEVICES'].strip()
     if len(cvd) > 0:
-        for i in range(len(cvd.split(','))):
-            ctx.append(mx.gpu(i))
-    if len(ctx) == 0:
+        ctx.extend(mx.gpu(i) for i in range(len(cvd.split(','))))
+    if not ctx:
         ctx = [mx.cpu()]
         print('use cpu')
     else:
@@ -113,13 +112,11 @@ def main(args):
 
     features_all = None
 
-    i = 0
     fstart = 0
     buffer = []
-    for line in open(os.path.join(args.input, 'filelist.txt'), 'r'):
+    for i, line in enumerate(open(os.path.join(args.input, 'filelist.txt'), 'r')):
         if i % 1000 == 0:
             print("processing ", i)
-        i += 1
         line = line.strip()
         image_path = os.path.join(args.input, line)
         buffer.append(image_path)

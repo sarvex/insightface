@@ -2,12 +2,12 @@
 # coding=utf-8
 
 import _init_paths
-import os 
+import os
 import os.path as osp
 import cv2
 import numpy as np
 import torch
-import argparse 
+import argparse
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 plt.switch_backend('agg')
@@ -50,7 +50,9 @@ update_config(args.cfg)
 pose_model = get_pose_model(config)
 print(pose_model)
 # state_dict = torch.load("../output/model4118.pth.tar")['pose_model_state_dict']
-assert osp.exists(args.pretrain), "Can not find pretrained model at {}".format(args.pretrain)
+assert osp.exists(
+    args.pretrain
+), f"Can not find pretrained model at {args.pretrain}"
 state_dict = torch.load(args.pretrain)['pose_model_state_dict']
 pose_model.load_state_dict(state_dict)
 pose_model.eval()
@@ -71,6 +73,10 @@ all_joints_3d_pre = np.concatenate(all_joints_3d_pre, axis=0)
 print(all_joints_3d_pre.shape)
 
 
+r = 0.95
+xroot = yroot = zroot = 0.
+# radius = max(4, (np.mean(image.shape[:2]) * 0.01).astype(int))
+radius = 0.75
 for idx, joints_3d_pre in tqdm(enumerate(all_joints_3d_pre)):
     joints_2d = all_joints_2d[idx]
     joints_3d_pre = joints_3d_pre - joints_3d_pre[13:14]
@@ -95,17 +101,13 @@ for idx, joints_3d_pre in tqdm(enumerate(all_joints_3d_pre)):
             cv_color = (89, 141, 252)
         x1, y1 = joints_2d[i].astype(np.int)
         x2, y2 = joints_2d[j].astype(np.int)
-        
+
         cv2.line(image, (x1, y1), (x2, y2), cv_color, 2)
         x1, y1, z1 = joints_3d_pre[i]
         x2, y2, z2 = joints_3d_pre[j]
         ax.plot([z1, z2], [x1, x2], [-y1, -y2], c=color, linewidth=3)
 
     image = image[::-1, :, ::-1].copy().astype(np.float) / 255.
-    r = 0.95
-    xroot = yroot = zroot = 0.
-    # radius = max(4, (np.mean(image.shape[:2]) * 0.01).astype(int))
-    radius = 0.75
     xx = np.linspace(-r * radius + xroot, r * radius + xroot, image.shape[1])
     yy = np.linspace(-r * radius + yroot, r * radius + yroot, image.shape[0])
     xx, yy = np.meshgrid(xx, yy)
@@ -129,5 +131,5 @@ for idx, joints_3d_pre in tqdm(enumerate(all_joints_3d_pre)):
     ax.w_yaxis.line.set_color(white)
     ax.w_zaxis.line.set_color(white)
 
-    plt.savefig("lsp_vis/{}.png".format(idx+1))
+    plt.savefig(f"lsp_vis/{idx + 1}.png")
     plt.close()
